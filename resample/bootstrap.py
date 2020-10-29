@@ -5,6 +5,7 @@ from typing import Callable, Generator, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from scipy import stats
+from tqdm import tqdm
 
 from resample.empirical import quantile_function_gen
 from resample.jackknife import jackknife
@@ -117,7 +118,7 @@ def bootstrap(fn: Callable, sample: Sequence, **kwargs) -> np.ndarray:
     np.array
         Results of `fn` applied to each bootstrap sample.
     """
-    return np.asarray([fn(x) for x in resample(sample, **kwargs)])
+    return np.asarray([fn(x) for x in tqdm(resample(sample, **kwargs))])
 
 
 def confidence_interval(
@@ -339,8 +340,12 @@ def _confidence_interval_percentile(
     thetas: np.ndarray,
     alpha_half: float,
 ) -> Tuple[float, float]:
+    if np.ndim(thetas) == 2:
+        n_variables = thetas.shape[-1]
+    else:
+        n_variables = 1
     quant = quantile_function_gen(thetas)
-    return quant(alpha_half), quant(1 - alpha_half)
+    return quant([alpha_half] * n_variables), quant([1 - alpha_half] * n_variables)
 
 
 def _confidence_interval_bca(
@@ -349,13 +354,14 @@ def _confidence_interval_bca(
     norm = stats.norm
 
     # bias correction
-    prop_less = np.mean(thetas < theta)  # proportion of replicates less than obs
+
+    prop_less = np.mean(thetas < np.expand_dims(theta, axis=0), axis=0)  # proportion of replicates less than obs
     z_naught = norm.ppf(prop_less)
 
     # acceleration
-    j_thetas -= np.mean(j_thetas)
-    num = np.sum((-j_thetas) ** 3)
-    den = np.sum(j_thetas ** 2)
+    j_thetas -= np.mean(j_thetas, axis=0)
+    num = np.sum((-j_thetas) ** 3, axis=0)
+    den = np.sum(j_thetas ** 2, axis=0)
     acc = num / (6 * den ** 1.5)
 
     z_low = z_naught + norm.ppf(alpha_half)

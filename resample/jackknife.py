@@ -4,6 +4,7 @@ Jackknife resampling.
 from typing import Callable, Generator, Sequence
 
 import numpy as np
+from tqdm import tqdm
 
 
 def resample(sample: Sequence, copy: bool = True) -> Generator[np.ndarray, None, None]:
@@ -68,7 +69,7 @@ def resample(sample: Sequence, copy: bool = True) -> Generator[np.ndarray, None,
     # x1 = [0, 2, 3] # override first index
     # x2 = [0, 1, 3] # override second index
     # x3 = [0, 1, 2] # ...
-    for i in range(n - 1):
+    for i in tqdm(range(n - 1)):
         x[i] = sample[i]
         yield x.copy() if copy else x
 

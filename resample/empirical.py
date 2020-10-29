@@ -44,7 +44,7 @@ def quantile_function_gen(sample: Sequence) -> Callable:
     callable
         Empirical quantile function.
     """
-    sample = np.sort(sample)
+    sample = np.sort(sample, axis=0)
     n = len(sample)
 
     def quant(p):
@@ -53,7 +53,9 @@ def quantile_function_gen(sample: Sequence) -> Callable:
         result = np.empty(len(p))
         valid = (0 <= p) & (p <= 1)
         idx = np.maximum(np.ceil(p[valid] * n).astype(np.int) - 1, 0)
-        result[valid] = sample[idx]
+        idcol = np.arange(len(p))[valid]
+        # todo: fix slicing
+        result[valid] = np.squeeze(sample[[idx], [idcol]])
         result[~valid] = np.nan
         if ndim == 0:
             return result[0]
